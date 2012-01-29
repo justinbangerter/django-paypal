@@ -1,8 +1,8 @@
+.DS_Store
 *.pyc
-.svn
-.project
-.pydevproject
-/dist
-/build
-/django_paypal.egg-info
-*.swp
+*.egg-info
+*.egg
+docs/_build
+build
+dist
+MANIFEST

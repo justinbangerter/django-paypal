@@ -1,28 +1,40 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from distribute_setup import use_setuptools
+use_setuptools()
 
 from setuptools import setup, find_packages
+from paypal import VERSION
 
-import paypal
+try:
+    README = open('README.md').read()
+except:
+    README = None
+
+try:
+    REQUIREMENTS = open('requirements.txt').read()
+except:
+    REQUIREMENTS = None
 
 setup(
-    name='django-paypal',
-    version=".".join(map(str, paypal.__version__)),
-    author='John Boxall',
-    author_email='john@handimobility.ca',
+    name = 'django-paypal',
+    version = VERSION,
+    description = 'description',
+    long_description = README,
+    install_requires = REQUIREMENTS,
+    author = 'John Boxall',
+    author_email = 'john@handimobility.ca',
     maintainer="David Cramer",
     maintainer_email="dcramer@gmail.com",
-    url='http://github.com/johnboxall/django-paypal',
-    install_requires=[
-        'Django>=1.0'
-    ],
-    description = 'A pluggable Django application for integrating PayPal Payments Standard or Payments Pro',
-    packages=find_packages(),
-    include_package_data=True,
-    classifiers=[
-        "Framework :: Django",
-        "Intended Audience :: Developers",
-        "Intended Audience :: System Administrators",
-        "Operating System :: OS Independent",
-        "Topic :: Software Development"
+    url = 'https://github.com/awarepixel/django-paypal',
+    packages = find_packages(),
+    include_package_data = True,
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Environment :: Web Environment',
+        'Framework :: Django',
+        'Intended Audience :: Developers',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Utilities'
     ],
 )
