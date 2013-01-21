@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.http import urlencode
 from django.forms.models import model_to_dict
+from django.utils.timezone import now
 try:
     from idmapper.models import SharedMemoryModel as Model
 except ImportError:
@@ -50,8 +51,8 @@ class PayPalNVP(Model):
     ipaddress = models.IPAddressField(blank=True)
     query = models.TextField(blank=True)
     response = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(default=now) #timezone-aware datetime
+    updated_at = models.DateTimeField()
         
     class Meta:
         db_table = "paypal_nvp"
@@ -75,6 +76,10 @@ class PayPalNVP(Model):
                 self.flag_info = paypal_response.get('l_longmessage0', '')
             else:
                 self.set_flag(paypal_response.get('l_longmessage0', ''), paypal_response.get('l_errorcode', ''))
+
+    def save(self, **kwargs):
+        self.updated_at = now() #timezone-aware datetime
+        return super(PayPalNVP, self).save()
 
     def set_flag(self, info, code=None):
         """Flag this instance for investigation."""
