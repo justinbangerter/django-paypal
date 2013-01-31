@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from django.conf import settings
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.handlers.wsgi import WSGIRequest
 from django.forms import ValidationError
 from django.http import QueryDict
@@ -10,6 +11,11 @@ from django.test.client import Client
 from paypal.pro.fields import CreditCardField
 from paypal.pro.helpers import PayPalWPP, PayPalError
 from paypal.pro.exceptions import PayPalFailure
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 class RequestFactory(Client):
     # Used to generate request objects.
@@ -23,6 +29,7 @@ class RequestFactory(Client):
             'SERVER_NAME': 'testserver',
             'SERVER_PORT': 80,
             'SERVER_PROTOCOL': 'HTTP/1.1',
+            'wsgi.input': StringIO("")
         }
         environ.update(self.defaults)
         environ.update(request)
@@ -30,7 +37,9 @@ class RequestFactory(Client):
 
 RF = RequestFactory()
 REQUEST = RF.get("/pay/", REMOTE_ADDR="127.0.0.1:8000")
-
+setattr(REQUEST, 'session', 'session')
+messages = FallbackStorage(REQUEST)
+setattr(REQUEST, '_messages', messages)
 
 class DummyPayPalWPP(PayPalWPP):
     pass
