@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 from django.template import RequestContext
 from django.shortcuts import render_to_response
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 from paypal.standard.pdt.models import PayPalPDT
 from paypal.standard.pdt.forms import PayPalPDTForm
 
 
-@require_GET
+@csrf_exempt
 def pdt(request, item_check_callable=None, template="pdt/pdt.html", context=None):
     """Standard implementation of a view that processes PDT and then renders a template
     For more advanced uses, create your own view and call process_pdt.
@@ -27,7 +27,7 @@ def process_pdt(request, item_check_callable=None):
     """
 
     pdt_obj = None
-    txn_id = request.GET.get('tx')
+    txn_id = request.REQUEST.get('tx')
     failed = False
     if txn_id is not None:
         # If an existing transaction with the id tx exists: use it
@@ -38,7 +38,7 @@ def process_pdt(request, item_check_callable=None):
             pass
 
         if pdt_obj is None:
-            form = PayPalPDTForm(request.GET)
+            form = PayPalPDTForm(request.REQUEST)
             if form.is_valid():
                 try:
                     pdt_obj = form.save(commit=False)
