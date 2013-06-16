@@ -1,3 +1,5 @@
+import urllib
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.test import TestCase
@@ -5,10 +7,14 @@ from django.test.client import Client
 
 from paypal.standard.models import ST_PP_CANCELLED
 from paypal.standard.ipn.models import PayPalIPN
-from paypal.standard.ipn.signals import (payment_was_successful, 
-    payment_was_flagged, recurring_skipped, recurring_failed,
+from paypal.standard.ipn.signals import (payment_was_successful,
+    payment_was_flagged, payment_was_refunded, payment_was_reversed,
+    recurring_skipped, recurring_failed,
     recurring_create, recurring_payment, recurring_cancel)
 
+
+# Parameters are all bytestrings, so we can construct a bytestring
+# request the same way that Paypal does.
 
 IPN_POST_PARAMS = {
     "protection_eligibility": "Ineligible",
@@ -24,7 +30,7 @@ IPN_POST_PARAMS = {
     "txn_type": "express_checkout",
     "handling_amount": "0.00",
     "payment_date": "23:04:06 Feb 02, 2009 PST",
-    "first_name": "Test",
+    "first_name": "J\xF6rg",
     "item_name": "",
     "charset": "windows-1252",
     "custom": "website_id=13&user_id=21",
@@ -46,7 +52,7 @@ IPN_POST_PARAMS = {
 }
 
 
-class IPNTest(TestCase):    
+class IPNTest(TestCase):
     urls = 'paypal.standard.ipn.tests.test_urls'
 
     def setUp(self):
@@ -57,67 +63,101 @@ class IPNTest(TestCase):
         self.old_postback = PayPalIPN._postback
         PayPalIPN._postback = lambda self: "VERIFIED"
 
-        self.payment_was_successful_receivers = payment_was_successful.receivers  
-        self.payment_was_flagged_receivers = payment_was_flagged.receivers  
-        self.recurring_skipped_receivers = recurring_skipped.receivers  
-        self.recurring_failed_receivers = recurring_failed.receivers  
-        self.recurring_create_receivers = recurring_create.receivers  
-        self.recurring_payment_receivers = recurring_payment.receivers  
-        self.recurring_cancel_receivers = recurring_cancel.receivers  
+        self.payment_was_successful_receivers = payment_was_successful.receivers
+        self.payment_was_flagged_receivers = payment_was_flagged.receivers
+        self.payment_was_refunded_receivers = payment_was_refunded.receivers
+        self.payment_was_reversed_receivers = payment_was_reversed.receivers
+        self.recurring_skipped_receivers = recurring_skipped.receivers
+        self.recurring_failed_receivers = recurring_failed.receivers
+        self.recurring_create_receivers = recurring_create.receivers
+        self.recurring_payment_receivers = recurring_payment.receivers
+        self.recurring_cancel_receivers = recurring_cancel.receivers
 
         payment_was_successful.receivers = []
         payment_was_flagged.receivers = []
-        recurring_skipped.receivers = [] 
-        recurring_failed.receivers = []  
-        recurring_create.receivers = [] 
+        payment_was_refunded.receivers = []
+        payment_was_reversed.receivers = []
+        recurring_skipped.receivers = []
+        recurring_failed.receivers = []
+        recurring_create.receivers = []
         recurring_payment.receivers = []
-        recurring_cancel.receivers = []  
-        
-        
+        recurring_cancel.receivers = []
+
+
     def tearDown(self):
         settings.DEBUG = self.old_debug
         PayPalIPN._postback = self.old_postback
-        
+
         payment_was_successful.receivers =self.payment_was_successful_receivers
         payment_was_flagged.receivers = self.payment_was_flagged_receivers
+        payment_was_refunded.receivers = self.payment_was_refunded_receivers
+        payment_was_reversed.receivers = self.payment_was_reversed_receivers
         recurring_skipped.receivers = self.recurring_skipped_receivers
         recurring_failed.receivers = self.recurring_failed_receivers
         recurring_create.receivers = self.recurring_create_receivers
         recurring_payment.receivers = self.recurring_payment_receivers
-        recurring_cancel.receivers = self.recurring_cancel_receivers  
-        
+        recurring_cancel.receivers = self.recurring_cancel_receivers
+
+    def paypal_post(self, params):
+        """
+        Does an HTTP POST the way that PayPal does, using the params given.
+        """
+        # We build params into a bytestring ourselves, to avoid some encoding
+        # processing that is done by the test client.
+        post_data = urllib.urlencode(params)
+        return self.client.post("/ipn/", post_data, content_type='application/x-www-form-urlencoded')
 
     def assertGotSignal(self, signal, flagged, params=IPN_POST_PARAMS):
         # Check the signal was sent. These get lost if they don't reference self.
         self.got_signal = False
         self.signal_obj = None
-        
+
         def handle_signal(sender, **kwargs):
             self.got_signal = True
             self.signal_obj = sender
         signal.connect(handle_signal)
-        
-        response = self.client.post("/ipn/", params)
+        response = self.paypal_post(params)
         self.assertEqual(response.status_code, 200)
         ipns = PayPalIPN.objects.all()
-        self.assertEqual(len(ipns), 1)        
-        ipn_obj = ipns[0]        
+        self.assertEqual(len(ipns), 1)
+        ipn_obj = ipns[0]
         self.assertEqual(ipn_obj.flag, flagged)
-        
+
         self.assertTrue(self.got_signal)
         self.assertEqual(self.signal_obj, ipn_obj)
-        
+        return ipn_obj
+
     def test_correct_ipn(self):
-        self.assertGotSignal(payment_was_successful, False)
+        ipn_obj = self.assertGotSignal(payment_was_successful, False)
+        # Check some encoding issues:
+        self.assertEqual(ipn_obj.first_name, u"J\u00f6rg")
 
     def test_failed_ipn(self):
         PayPalIPN._postback = lambda self: "INVALID"
         self.assertGotSignal(payment_was_flagged, True)
 
+    def test_refunded_ipn(self):
+        update = {
+            "payment_status": "Refunded"
+        }
+        params = IPN_POST_PARAMS.copy()
+        params.update(update)
+
+        self.assertGotSignal(payment_was_refunded, False, params)
+
+    def test_reversed_ipn(self):
+        update = {
+            "payment_status": "Reversed"
+        }
+        params = IPN_POST_PARAMS.copy()
+        params.update(update)
+
+        self.assertGotSignal(payment_was_reversed, False, params)
+
     def assertFlagged(self, updates, flag_info):
         params = IPN_POST_PARAMS.copy()
         params.update(updates)
-        response = self.client.post("/ipn/", params)
+        response = self.paypal_post(params)
         self.assertEqual(response.status_code, 200)
         ipn_obj = PayPalIPN.objects.all()[0]
         self.assertEqual(ipn_obj.flag, True)
@@ -129,24 +169,23 @@ class IPNTest(TestCase):
         self.assertFlagged(update, flag_info)
 
     def test_invalid_payment_status(self):
-        update = {"payment_status": "Failed"}
-        flag_info = u"Invalid payment_status. (Failed)"
+        update = {"payment_status": "Failure"}
+        flag_info = u"Invalid payment_status. (Failure)"
         self.assertFlagged(update, flag_info)
-        
+
     def test_vaid_payment_status_cancelled(self):
         update = {"payment_status": ST_PP_CANCELLED}
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        response = self.client.post("/ipn/", params)
+        response = self.paypal_post(params)
         self.assertEqual(response.status_code, 200)
         ipn_obj = PayPalIPN.objects.all()[0]
         self.assertEqual(ipn_obj.flag, False)
-        
 
-    def test_duplicate_txn_id(self):       
-        self.client.post("/ipn/", IPN_POST_PARAMS)
-        self.client.post("/ipn/", IPN_POST_PARAMS)
-        self.assertEqual(len(PayPalIPN.objects.all()), 2)        
+    def test_duplicate_txn_id(self):
+        self.paypal_post(IPN_POST_PARAMS)
+        self.paypal_post(IPN_POST_PARAMS)
+        self.assertEqual(len(PayPalIPN.objects.all()), 2)
         ipn_obj = PayPalIPN.objects.order_by('-created_at', '-pk')[0]
         self.assertEqual(ipn_obj.flag, True)
         self.assertEqual(ipn_obj.flag_info, "Duplicate txn_id. (51403485VH153354B)")
@@ -159,7 +198,7 @@ class IPNTest(TestCase):
         }
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        
+
         self.assertGotSignal(recurring_skipped, False, params)
 
     def test_recurring_payment_failed_ipn(self):
@@ -170,7 +209,7 @@ class IPNTest(TestCase):
         }
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        
+
         self.assertGotSignal(recurring_failed, False, params)
 
     def test_recurring_payment_create_ipn(self):
@@ -181,7 +220,7 @@ class IPNTest(TestCase):
         }
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        
+
         self.assertGotSignal(recurring_create, False, params)
 
     def test_recurring_payment_cancel_ipn(self):
@@ -192,13 +231,13 @@ class IPNTest(TestCase):
         }
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        
+
         self.assertGotSignal(recurring_cancel, False, params)
 
     def test_recurring_payment_ipn(self):
         """
-        The wat the code is written in 
-        PayPalIPN.send_signals the recurring_payment 
+        The wat the code is written in
+        PayPalIPN.send_signals the recurring_payment
         will never be sent because the paypal ipn
         contains a txn_id, if this test failes you
         might break some compatibility
@@ -209,17 +248,16 @@ class IPNTest(TestCase):
         }
         params = IPN_POST_PARAMS.copy()
         params.update(update)
-        
+
         self.got_signal = False
         self.signal_obj = None
-        
+
         def handle_signal(sender, **kwargs):
             self.got_signal = True
             self.signal_obj = sender
         recurring_payment.connect(handle_signal)
-        
-        response = self.client.post("/ipn/", params)
+        response = self.paypal_post(params)
         self.assertEqual(response.status_code, 200)
         ipns = PayPalIPN.objects.all()
-        self.assertEqual(len(ipns), 1)        
+        self.assertEqual(len(ipns), 1)
         self.assertFalse(self.got_signal)

@@ -81,9 +81,11 @@ Using PayPal Payments Standard IPN:
     transaction. Connect the signals to actions to perform the needed operations
     when a successful payment is recieved.
     
-    There are two signals for basic transactions:
+    There are four signals for basic transactions:
     - `payment_was_successful` 
     - `payment_was_flagged`
+    - `payment_was_refunded`
+    - `payment_was_reversed`
     
     And four signals for subscriptions:
     - `subscription_cancel` - Sent when a subscription is cancelled.
@@ -115,7 +117,7 @@ Using PayPal Payments Standard IPN:
 Using PayPal Payments Standard PDT:
 -----------------------------------
 
-Paypal Payment Data Transfer (PDT) allows you to display transaction details to a customer immediately on return to your site unlike PayPal IPN which may take some seconds. [You will need to enable PDT in your PayPal account to use it.your PayPal account to use it](https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/howto_html_paymentdatatransfer).
+Paypal Payment Data Transfer (PDT) allows you to display transaction details to a customer immediately on return to your site unlike PayPal IPN which may take some seconds. [You will need to enable PDT in your PayPal account to use it.](https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/howto_html_paymentdatatransfer).
 
 1. Download the code from GitHub:
 
