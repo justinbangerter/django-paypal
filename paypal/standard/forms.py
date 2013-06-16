@@ -15,7 +15,10 @@ from paypal.standard.conf import (POSTBACK_ENDPOINT, SANDBOX_POSTBACK_ENDPOINT,
 PAYPAL_DATE_FORMAT = ("%H:%M:%S %b. %d, %Y PST",
                       "%H:%M:%S %b. %d, %Y PDT",
                       "%H:%M:%S %b %d, %Y PST",
-                      "%H:%M:%S %b %d, %Y PDT",)
+                      "%H:%M:%S %b %d, %Y PDT",
+                      "%H:%M:%S %d %b %Y PST",
+                      "%H:%M:%S %d %b %Y PDT",
+                      )
 
 class PayPalPaymentsForm(forms.Form):
     """
