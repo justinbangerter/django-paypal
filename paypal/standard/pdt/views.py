@@ -29,6 +29,13 @@ def process_pdt(request, item_check_callable=None):
     pdt_obj = None
     txn_id = request.REQUEST.get('tx')
     failed = False
+
+    if tnx_id is '':
+        try:
+            raise PayPalPDT.IsBlank( 'PayPalPDT txn_id is blank':
+        except:
+            txn_id = None
+
     if txn_id is not None:
         # If an existing transaction with the id tx exists: use it
         try:
@@ -58,6 +65,11 @@ def process_pdt(request, item_check_callable=None):
             if not failed:
                 # The PDT object gets saved during verify
                 pdt_obj.verify(item_check_callable)
+    elif tnx_id is '':
+        try:
+            raise PayPalPDT.IsBlank( 'PayPalPDT txn_id is blank':
+        except:
+            pass
     else:
         pass # we ignore any PDT requests that don't have a transaction id
 
