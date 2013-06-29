@@ -8,32 +8,38 @@ from paypal.standard.pdt.forms import PayPalPDTForm
 
 
 @csrf_exempt
-def pdt(request, item_check_callable=None, template="pdt/pdt.html", context=None):
-    """Standard implementation of a view that processes PDT and then renders a template
+def pdt(request,
+        item_check_callable=None,
+        template="pdt/pdt.html",
+        context=None):
+    """Standard implementation of a view that processes PDT and then
+    renders a template.
     For more advanced uses, create your own view and call process_pdt.
     """
     pdt_obj, failed = process_pdt(request, item_check_callable)
 
     context = context or {}
-    context.update({"failed":failed, "pdt_obj":pdt_obj})
+    context.update({"failed": failed, "pdt_obj": pdt_obj})
     return render_to_response(template, context, RequestContext(request))
+
 
 def process_pdt(request, item_check_callable=None):
     """
     Payment data transfer implementation: http://tinyurl.com/c9jjmw
     This function returns a tuple of pdt_obj and failed
     pdt_obj is an object of type PayPalPDT
-    failed is a flag that indeicates whether the transaction was processed successfully
+    failed is a flag that indeicates whether the transaction was
+    processed successfully
     """
 
     pdt_obj = None
     txn_id = request.REQUEST.get('tx')
     failed = False
 
-    if tnx_id is '':
+    if txn_id is '':
         try:
             txn_id = None
-            raise PayPalPDT.IsBlank( 'PayPalPDT txn_id is blank':
+            raise PayPalPDT.IsBlank('PayPalPDT txn_id is blank')
         except:
             pass
 
@@ -66,13 +72,7 @@ def process_pdt(request, item_check_callable=None):
             if not failed:
                 # The PDT object gets saved during verify
                 pdt_obj.verify(item_check_callable)
-    elif tnx_id is '':
-        try:
-            raise PayPalPDT.IsBlank( 'PayPalPDT txn_id is blank':
-        except:
-            pass
     else:
-        pass # we ignore any PDT requests that don't have a transaction id
+        pass  # we ignore any PDT requests that don't have a transaction id
 
     return (pdt_obj, failed)
-
