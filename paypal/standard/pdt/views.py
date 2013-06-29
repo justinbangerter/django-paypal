@@ -32,9 +32,10 @@ def process_pdt(request, item_check_callable=None):
 
     if tnx_id is '':
         try:
+            txn_id = None
             raise PayPalPDT.IsBlank( 'PayPalPDT txn_id is blank':
         except:
-            txn_id = None
+            pass
 
     if txn_id is not None:
         # If an existing transaction with the id tx exists: use it
