@@ -39,7 +39,7 @@ def process_pdt(request, item_check_callable=None):
     if txn_id is '':
         try:
             txn_id = None
-            raise PayPalPDT.IsBlank('PayPalPDT txn_id is blank')
+            raise ValueError('PayPalPDT txn_id is blank', txn_id)
         except:
             pass
 
