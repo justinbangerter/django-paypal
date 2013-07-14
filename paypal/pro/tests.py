@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from django.conf import settings
-from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.handlers.wsgi import WSGIRequest
 from django.forms import ValidationError
 from django.http import QueryDict
@@ -12,18 +11,9 @@ from paypal.pro.fields import CreditCardField
 from paypal.pro.helpers import PayPalWPP, PayPalError
 from paypal.pro.exceptions import PayPalFailure
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-            'wsgi.input': StringIO("")
-
 RF = RequestFactory()
 REQUEST = RF.get("/pay/", REMOTE_ADDR="127.0.0.1:8000")
-setattr(REQUEST, 'session', 'session')
-messages = FallbackStorage(REQUEST)
-setattr(REQUEST, '_messages', messages)
+
 
 class DummyPayPalWPP(PayPalWPP):
     pass
@@ -32,7 +22,7 @@ class DummyPayPalWPP(PayPalWPP):
 #         # @@@ Need some reals data here.
 #         "DoDirectPayment": """ack=Success&timestamp=2009-03-12T23%3A52%3A33Z&l_severitycode0=Error&l_shortmessage0=Security+error&l_longmessage0=Security+header+is+not+valid&version=54.0&build=854529&l_errorcode0=&correlationid=""",
 #     }
-# 
+#
 #     def _request(self, data):
 #         return self.responses["DoDirectPayment"]
 
@@ -46,14 +36,14 @@ class CreditCardFieldTest(TestCase):
 
     def test_invalidCreditCards(self):
         self.assertEquals(CreditCardField().clean('4797-5034-2987-9309'), '4797503429879309')
-        
+
 class PayPalWPPTest(TestCase):
     def setUp(self):
-    
+
         # Avoding blasting real requests at PayPal.
         self.old_debug = settings.DEBUG
         settings.DEBUG = True
-            
+
         self.item = {
             'amt': '9.95',
             'inv': 'inv',
@@ -61,9 +51,9 @@ class PayPalWPPTest(TestCase):
             'next': 'http://www.example.com/next/',
             'returnurl': 'http://www.example.com/pay/',
             'cancelurl': 'http://www.example.com/cancel/'
-        }                    
+        }
         self.wpp = DummyPayPalWPP(REQUEST)
-        
+
     def tearDown(self):
         settings.DEBUG = self.old_debug
 
@@ -87,7 +77,7 @@ class PayPalWPPTest(TestCase):
             'ipaddress': '10.0.1.199',}
         data.update(self.item)
         self.assertTrue(self.wpp.doDirectPayment(data))"""
-    
+
     def test_doDirectPayment_invalid(self):
         data = {
             'firstname': 'Epic',
@@ -124,7 +114,7 @@ class PayPalWPPTest(TestCase):
 #  'paymentaction': 'Sale',
 #  'returnurl': u'http://xxx.xxx.xxx.xxx/deploy/480/upgrade/?upgrade=cname',
 #  'token': u'EC-6HW17184NE0084127'}
-# 
+#
 # PayPal Response:
 # {'ack': 'Success',
 #  'amt': '10.00',
