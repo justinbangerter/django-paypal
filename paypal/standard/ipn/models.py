@@ -3,6 +3,7 @@
 import urllib2
 from paypal.standard.models import PayPalStandardBase
 from paypal.standard.ipn.signals import *
+import logging
 
 
 class PayPalIPN(PayPalStandardBase):
@@ -23,8 +24,20 @@ class PayPalIPN(PayPalStandardBase):
 
     def send_signals(self):
         """Shout for the world to hear whether a txn was successful."""
+
+        # On all conditions, send the default signal.
+        #
+        # This reduces the need for app modifications
+        # in the case of future PayPal API changes.
+        #
+        # Consumers of this app may now implement
+        # listeners without having to create new signals.
+        logging.info("Detected ipn signal: " + self.txn_type)
+        ipn_signal.send(sender=self)
+
         # Transaction signals:
         if self.is_transaction():
+            logging.info("Detected transaction: " + self.txn_id)
             if self.flag:
                 payment_was_flagged.send(sender=self)
             elif self.is_refund():
@@ -38,6 +51,7 @@ class PayPalIPN(PayPalStandardBase):
         # Recurring payment signals:
         # XXX: Should these be merged with subscriptions?
         elif self.is_recurring():
+            logging.info("Detected recurring signal: " + self.recurring_payment_id)
             if self.is_recurring_create():
                 recurring_create.send(sender=self)
             elif self.is_recurring_payment():
@@ -50,6 +64,7 @@ class PayPalIPN(PayPalStandardBase):
                 recurring_failed.send(sender=self)
         # Subscription signals:
         else:
+            logging.info("Detected subscription signal:")
             if self.is_subscription_cancellation():
                 subscription_cancel.send(sender=self)
             elif self.is_subscription_signup():
@@ -60,13 +75,4 @@ class PayPalIPN(PayPalStandardBase):
                 subscription_modify.send(sender=self)
             elif self.is_subscription_failed():
                 subscription_failed.send(sender=self)
-
-        # On all conditions, send the default signal.
-        #
-        # This reduces the need for app modifications
-        # in the case of future PayPal API changes.
-        #
-        # Consumers of this app may now implement
-        # listeners without having to create new signals.
-        ipn_signal.send(sender=self)
 
