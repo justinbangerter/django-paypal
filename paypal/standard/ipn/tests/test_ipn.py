@@ -1,16 +1,17 @@
 import urllib
 
 from django.conf import settings
-from django.http import HttpResponse
 from django.test import TestCase
-from django.test.client import Client
 
 from paypal.standard.models import ST_PP_CANCELLED
 from paypal.standard.ipn.models import PayPalIPN
 from paypal.standard.ipn.signals import (payment_was_successful,
     payment_was_flagged, payment_was_refunded, payment_was_reversed,
     recurring_skipped, recurring_failed,
-    recurring_create, recurring_payment, recurring_cancel)
+    recurring_create, recurring_payment, recurring_cancel,
+    subscription_cancel, subscription_eot, subscription_modify,
+    subscription_signup, subscription_payment, subscription_failed,
+    ipn_signal)
 
 
 # Parameters are all bytestrings, so we can construct a bytestring
@@ -67,21 +68,37 @@ class IPNTest(TestCase):
         self.payment_was_flagged_receivers = payment_was_flagged.receivers
         self.payment_was_refunded_receivers = payment_was_refunded.receivers
         self.payment_was_reversed_receivers = payment_was_reversed.receivers
+
         self.recurring_skipped_receivers = recurring_skipped.receivers
         self.recurring_failed_receivers = recurring_failed.receivers
         self.recurring_create_receivers = recurring_create.receivers
         self.recurring_payment_receivers = recurring_payment.receivers
         self.recurring_cancel_receivers = recurring_cancel.receivers
 
+        self.subscription_cancel_receivers = subscription_cancel.receivers
+        self.subscription_failed_receivers = subscription_failed.receivers
+        self.subscription_payment_receivers = subscription_payment.receivers
+        self.subscription_signup_receivers = subscription_signup.receivers
+        self.subscription_modify_receivers = subscription_modify.receivers
+        self.subscription_eot_receivers = subscription_eot.receivers
+
         payment_was_successful.receivers = []
         payment_was_flagged.receivers = []
         payment_was_refunded.receivers = []
         payment_was_reversed.receivers = []
+
         recurring_skipped.receivers = []
         recurring_failed.receivers = []
         recurring_create.receivers = []
         recurring_payment.receivers = []
         recurring_cancel.receivers = []
+
+        subscription_cancel.receivers = []
+        subscription_failed.receivers = []
+        subscription_payment.receivers = []
+        subscription_signup.receivers = []
+        subscription_modify.receivers = []
+        subscription_eot.receivers = []
 
 
     def tearDown(self):
@@ -92,11 +109,20 @@ class IPNTest(TestCase):
         payment_was_flagged.receivers = self.payment_was_flagged_receivers
         payment_was_refunded.receivers = self.payment_was_refunded_receivers
         payment_was_reversed.receivers = self.payment_was_reversed_receivers
+
         recurring_skipped.receivers = self.recurring_skipped_receivers
         recurring_failed.receivers = self.recurring_failed_receivers
         recurring_create.receivers = self.recurring_create_receivers
         recurring_payment.receivers = self.recurring_payment_receivers
         recurring_cancel.receivers = self.recurring_cancel_receivers
+
+        subscription_cancel.receivers = self.subscription_cancel_receivers
+        subscription_failed.receivers = self.subscription_failed_receivers
+        subscription_payment.receivers = self.subscription_payment_receivers
+        subscription_signup.receivers = self.subscription_signup_receivers
+        subscription_modify.receivers = self.subscription_modify_receivers
+        subscription_eot.receivers = self.subscription_eot_receivers
+
 
     def paypal_post(self, params):
         """
@@ -261,3 +287,64 @@ class IPNTest(TestCase):
         ipns = PayPalIPN.objects.all()
         self.assertEqual(len(ipns), 1)
         self.assertFalse(self.got_signal)
+
+    def test_subscription_cancel_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_cancel",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_cancel, False, params)
+
+    def test_subscription_failed_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_failed",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_failed, False, params)
+
+    def test_subscription_payment_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_payment",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_payment, False, params)
+
+    def test_subscription_signup_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_signup",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_signup, False, params)
+
+    def test_subscription_modify_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_modify",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_modify, False, params)
+
+    def test_subscription_eot_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "subscr_eot",
+            "txn_id": ""
+        })
+
+        self.assertGotSignal(subscription_eot, False, params)
+
+    def test_default_ipn(self):
+        params = IPN_POST_PARAMS.copy()
+        params.update({
+            "txn_type": "future_paypal_txn_type",
+        })
+        self.assertGotSignal(ipn_signal, False, params)

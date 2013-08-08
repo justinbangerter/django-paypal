@@ -30,6 +30,12 @@ subscription_modify = Signal()
 # Sent when a subscription is created.
 subscription_signup = Signal()
 
+# Sent when a subscription payment fails.
+subscription_failed = Signal()
+
+# Sent when a subscription payment is recieved.
+subscription_payment = Signal()
+
 # recurring_payment_profile_created
 recurring_create = Signal()
 
@@ -41,3 +47,7 @@ recurring_cancel = Signal()
 recurring_skipped = Signal()
 
 recurring_failed = Signal()
+
+
+# This signal is sent on every ipn receipt
+ipn_signal = Signal()

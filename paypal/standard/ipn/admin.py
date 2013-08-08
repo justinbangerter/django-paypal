@@ -50,6 +50,16 @@ class PayPalIPNAdmin(admin.ModelAdmin):
                 "next_payment_date"
             ]
         }),
+        ("Subscription", {
+            "description": "Information about subscription Payments.",
+            "classes": ("collapse",),
+            "fields": [
+                "amount1", "amount2", "amount3", "mc_amount1", "mc_amount2",
+                "mc_amount3", "password", "period1", "period2", "period3",
+                "reattempt", "recur_times", "recurring", "retry_at",
+                "subscr_date", "subscr_effective", "subscr_id", "username"
+            ]
+        }),
         ("Admin", {
             "description": "Additional Info.",
             "classes": ('collapse',),

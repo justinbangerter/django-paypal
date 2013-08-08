@@ -46,7 +46,7 @@ class PayPalIPN(PayPalStandardBase):
                 recurring_skipped.send(sender=self)
             elif self.is_recurring_failed():
                 recurring_failed.send(sender=self)
-       # Subscription signals:
+        # Subscription signals:
         else:
             if self.is_subscription_cancellation():
                 subscription_cancel.send(sender=self)
@@ -56,3 +56,17 @@ class PayPalIPN(PayPalStandardBase):
                 subscription_eot.send(sender=self)
             elif self.is_subscription_modified():
                 subscription_modify.send(sender=self)
+            elif self.is_subscription_failed():
+                subscription_failed.send(sender=self)
+            elif self.is_subscription_payment():
+                subscription_payment.send(sender=self)
+
+        # On all conditions, send the default signal.
+        #
+        # This reduces the need for app modifications
+        # in the case of future PayPal API changes.
+        #
+        # Consumers of this app may now implement
+        # listeners without having to create new signals.
+        ipn_signal.send(sender=self)
+
