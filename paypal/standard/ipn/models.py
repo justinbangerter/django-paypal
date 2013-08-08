@@ -31,6 +31,8 @@ class PayPalIPN(PayPalStandardBase):
                 payment_was_refunded.send(sender=self)
             elif self.is_reversed():
                 payment_was_reversed.send(sender=self)
+            elif self.is_subscription_payment():
+                subscription_payment.send(sender=self)
             else:
                 payment_was_successful.send(sender=self)
         # Recurring payment signals:
@@ -58,8 +60,6 @@ class PayPalIPN(PayPalStandardBase):
                 subscription_modify.send(sender=self)
             elif self.is_subscription_failed():
                 subscription_failed.send(sender=self)
-            elif self.is_subscription_payment():
-                subscription_payment.send(sender=self)
 
         # On all conditions, send the default signal.
         #

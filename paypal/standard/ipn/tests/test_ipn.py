@@ -310,7 +310,7 @@ class IPNTest(TestCase):
         params = IPN_POST_PARAMS.copy()
         params.update({
             "txn_type": "subscr_payment",
-            "txn_id": ""
+            #subscription payments have a txn_id
         })
 
         self.assertGotSignal(subscription_payment, False, params)
